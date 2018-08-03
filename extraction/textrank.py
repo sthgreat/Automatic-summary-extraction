@@ -54,11 +54,9 @@ def similary_compute_old(word_li1, word_li2):
     child = 0
     for i in word_li1:
         if i in word_li2:
-            child += 1
-    if child<1e-12:
-        return 0
+            child += 1.0
     mom = math.log(len(word_li1)) + math.log(len(word_li2))
-    similary = child/mom
+    similary = (child + 0.1)/mom
     return similary
 
 def similary_compute_vec(word_li1, word_li2):
@@ -76,12 +74,13 @@ def value_matrix(li):
         for k in range(len(li)):
             if k > i:
                 matrix[i][k] = similary_compute_old(li[i], li[k])
-    m_r = FZ(matrix)
-    m_last = m_r + matrix
-    return m_last
+                matrix[k][i] = similary_compute_old(li[i], li[k])
+    # m_r = FZ(matrix)
+    # m_last = m_r + matrix
+    return matrix
 
 
-def textrank(matrix, n, dic_2, para=0.85):  # 更改权重字典dic_2，lenth为li的长度，也为matrix的行（宽）长度
+def textrank(matrix, n, dic_2, para=0.8):  # 更改权重字典dic_2，lenth为li的长度，也为matrix的行（宽）长度
     dic_linshi = {}
     sum_li = list(matrix.sum(axis=1))  # 相似度按行相加的结果列表
 
@@ -115,11 +114,16 @@ if __name__ == '__main__':
     sort_d = dict(sorted(dic_2.items(), key=lambda d: d[1], reverse=True))
 
     ccc = 0
+    list_num = []
     for i in sort_d:  # 序号+排序好的句子权重（从大到小）
-        if ccc > 3:
+        if ccc>3:
             break
-        print(dic[i])
+        list_num.append(i)
         ccc += 1
+
+    list_num.sort()
+    for num in list_num:
+        print(dic[num])
 
     print(dic)
     print(sort_d)
