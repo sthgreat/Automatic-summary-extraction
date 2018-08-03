@@ -11,7 +11,7 @@ def FZ(mat):
 '''=============我是分割线=============='''
 
 
-def process_txt(content_path):
+def process_txt(content_path, dic):
     '''
     预处理处理文本内容
     :param content_path: 文本路径（文本需utf-8编码）
@@ -22,18 +22,13 @@ def process_txt(content_path):
         stopword_li = f1.read().split('\n')
         stopword_li.append('啊')
 
-    with open(content_path, 'r', encoding='utf-8') as f:  # 构建字典：序号+句子
-        count = 0
-        for i in f:
-            dic[count] = i
-            count += 1
-
     with open(content_path, 'r', encoding='utf-8') as f:
         content = f.read().replace(' ', '').replace('\n', '').replace('、', '').replace('%', '')
         sentence_li = content.split('。')  # 分句
         count = 0
-        for i in sentence_li:
-            dic[count] = i
+
+        for s in sentence_li:  # 构建字典：序号+句子
+            dic[count] = s
             count += 1
 
         for element in sentence_li:
@@ -46,6 +41,7 @@ def process_txt(content_path):
             return_li.append(li)
             # print(process_li)
             # return_li.append(process_li)
+
     return return_li
 
 
@@ -59,8 +55,10 @@ def similary_compute_old(word_li1, word_li2):
     for i in word_li1:
         if i in word_li2:
             child += 1
+    if child<1e-12:
+        return 0
     mom = math.log(len(word_li1)) + math.log(len(word_li2))
-    similary = (child + 1)/mom
+    similary = child/mom
     return similary
 
 def similary_compute_vec(word_li1, word_li2):
@@ -83,14 +81,14 @@ def value_matrix(li):
     return m_last
 
 
-def textrank(matrix, n, para=0.85):  # 更改权重字典dic_2，lenth为li的长度，也为matrix的行（宽）长度
+def textrank(matrix, n, dic_2, para=0.85):  # 更改权重字典dic_2，lenth为li的长度，也为matrix的行（宽）长度
     dic_linshi = {}
     sum_li = list(matrix.sum(axis=1))  # 相似度按行相加的结果列表
 
     for i in range(len(matrix)):
         dic_linshi[i] = 1  # 初始化权重
     count = 0
-    while count<n:
+    while count < n:
         for i in range(len(matrix)):
             s = 0
             for k in range(len(matrix)):
@@ -104,19 +102,25 @@ def textrank(matrix, n, para=0.85):  # 更改权重字典dic_2，lenth为li的�
 
 if __name__ == '__main__':
     jieba.load_userdict(r'E:\nlp\分词\自定义词典.txt')
+    ncount = 0
 
     dic = {}  # 序号+句子
     dic_2 = {}  # 序号+句子权重
 
     n = 3
-    li = process_txt(r'E:\nlp\Word_process\文章摘要提取\test_3.txt')
+    li = process_txt(r'E:\nlp\Word_process\文章摘要提取\test_3.txt', dic)
     matrix = value_matrix(li)
-    textrank(matrix, 300)
-    sentence_list = list(dic_2.values())
-    sentence_list.sort()
-    sentence_list.reverse()
+    textrank(matrix, 500, dic_2)
 
-    dic_3 = dict(zip(sentence_list, dic_2.keys()))
+    sort_d = dict(sorted(dic_2.items(), key=lambda d: d[1], reverse=True))
 
-    for i in range(n):
-        print(dic[dic_3[sentence_list[i]]])
+    ccc = 0
+    for i in sort_d:  # 序号+排序好的句子权重（从大到小）
+        if ccc > 3:
+            break
+        print(dic[i])
+        ccc += 1
+
+    print(dic)
+    print(sort_d)
+
