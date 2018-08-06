@@ -204,7 +204,7 @@ def value_matrix_old(li):
         for k in range(len(li)):
             if k > i:
                 matrix[i][k] = similary_compute_old(li[i], li[k])
-                matrix[k][i] = similary_compute_old(li[i], li[k])
+                matrix[k][i] = matrix[i][k]
     # m_r = FZ(matrix)
     # m_last = m_r + matrix
     return matrix
@@ -224,7 +224,7 @@ def value_matrix_vec(li):
         for k in range(len(li)):
             if k > i:
                 matrix[i][k] = similary_compute_vec(li[i], li[k], dic_word_vec)
-                matrix[k][i] = similary_compute_vec(li[i], li[k], dic_word_vec)
+                matrix[k][i] = matrix[i][k]
     # m_r = FZ(matrix)
     # m_last = m_r + matrix
     print('权值矩阵加载完毕')
