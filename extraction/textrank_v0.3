@@ -1,0 +1,325 @@
+import numpy as np
+import jieba
+import math
+import csv
+import time
+import pickle
+import os
+import re
+
+# author: 千山漫雪空
+# time: 2018.8.2
+# version:v0.2
+# encoding:utf-8
+
+
+def dic_make():
+    '''
+    预先创建词与词向量的字典：词+词向量
+    :return:
+    '''
+    dic_word_vec = {}
+    with open(r'E:\nlp\Word_process\Data\输入资源\sgns.sogou.word', 'r', encoding='utf-8') as f:  # word中数据写入
+        for element in f:
+            element_list = element.split(' ')
+            word_name = element_list[0]
+            del element_list[len(element_list) - 1]
+            del element_list[0]
+            if len(element_list) == 0:
+                continue
+            else:
+                dic_word_vec[word_name] = list(map(eval, element_list))  # 数据写入结束，建立了词+向量的字典 dic_word_vec
+
+    with open(r'E:\nlp\语料\文本摘要提取\词向量字典.txt', 'wb') as f:
+        pickle.dump(dic_word_vec, f)
+
+    print('词向量数据加载完毕   =。=')
+''' ===========180度旋转矩阵=========='''
+
+
+def fz(a):
+    return a[::-1]
+
+
+def FZ(mat):
+    return np.array(fz(list(map(fz, mat))))
+
+
+'''=============我是分割线=============='''
+
+def mkdir(path):
+    # 引入模块
+    import os
+
+    # 去除首位空格
+    path = path.strip()
+    # 去除尾部 \ 符号
+    path = path.rstrip("\\")
+
+    # 判断路径是否存在
+    # 存在     True
+    # 不存在   False
+    isExists = os.path.exists(path)
+
+    # 判断结果
+    if not isExists:
+        # 如果不存在则创建目录
+        # 创建目录操作函数
+        os.makedirs(path)
+        print('已创建')
+
+        return True
+    else:
+        # 如果目录存在则不创建，并提示目录已存在
+        print('目录已经存在')
+        return False
+
+
+def process_txt(content_path, dic):
+    '''
+    预处理处理文本内容
+    :param content_path: 文本路径（文本需utf-8编码）
+    :return: 返回一个列表[['今天','下雨'],['明天','天气','怎样'],['这','真的','是,'太棒了']]
+    '''
+    return_li = []
+    with open(r'E:\nlp\分词\停用词表_1.txt', 'r', encoding='utf-8') as f1:  # 停用词表导入
+        stopword_li = f1.read().split('\n')
+        stopword_li.append('啊')
+
+    with open(content_path, 'r', encoding='utf-8') as f:
+        content = f.read().replace(' ', '').replace('\n', '')
+        content_1 = re.sub(r'‘,‘', '', content)
+
+        sentence_li = content_1.split('。')  # 分句
+        count = 0
+
+        for s in sentence_li:  # 构建字典：序号+句子
+            dic[count] = s
+            count += 1
+
+        for element in sentence_li:
+            li = []
+            word_str = ','.join(jieba.cut(element))  # 分词
+            process_li = word_str.split(',')
+            for word in process_li:
+                if word not in stopword_li:
+                    li.append(word)
+            return_li.append(li)
+            # print(process_li)
+            # return_li.append(process_li)
+
+    return return_li
+
+
+def process_csv(csv_path, save_path):
+    '''
+    此方法用来处理从数据库中提取的含4个字段的csv文件，其中4个字段分别是title_news，source_news，category_news，details_news
+    结果保存为按文章类别保存的文件夹以及文件夹下的文章原始文本
+    :param content_path:原始csv文件
+    :param save_path:总文件夹目录
+    :return:
+    '''
+    count = 0
+    error_count = 0
+
+    with open(csv_path, 'r', encoding='utf-8') as read_f:
+        csvf = csv.reader(read_f)
+        for line in csvf:
+            if line[2] != '':
+                file_path = save_path + '\\' + str(line[2]).replace('|', '').replace(r'/', '').replace('?', '').replace('*', '').replace('"', '').replace('"', '').replace('<', '').replace('>', '')
+            else:
+                file_path = save_path + '\\' + '未标明的分类'
+            mkdir(file_path)
+            txt_path = file_path + '\\' + str(line[0]).replace('|', '').replace(r'/', '').replace('?', '').replace('*', '').replace('"', '').replace('"', '').replace('<', '').replace('>', '') + '.txt'
+            try:
+                with open(txt_path, 'w', encoding='utf-8') as save_f:
+                    save_f.write(str(line[3]))
+                count += 1
+            except:
+                error_count += 1
+                continue
+        print('csv文件处理完毕')
+    print('错误的文件个数为：{}'.format(error_count))
+
+
+def process_piliang():
+    pass
+
+
+def similary_compute_old(word_li1, word_li2):
+    '''
+    :param word_li1: ['今天','下雨']
+    :param word_li2: ['明天','天气','怎样']
+    :return:
+    '''
+    try:
+        child = 0
+        for i in word_li1:
+            if i in word_li2:
+                child += 1.0
+        mom = math.log(len(word_li1)) + math.log(len(word_li2))
+        similary = (child + 0.1)/mom
+        return similary
+    except:
+        return 0
+
+
+def similary_compute_vec(word_li1, word_li2, process_dic):
+    '''
+    计算两个句子之间的相似度
+    :param word_li1: ['今天','下雨']
+    :param word_li2: ['明天','天气','怎样']
+    :param process_dic:
+    :return:
+    '''
+    sentence_1 = np.zeros([300, ])  # 原始词向量文件格式：词 （词向量的维度）
+    sentence_2 = np.zeros([300, ])
+    for i in word_li1:
+        if i in process_dic:
+            sentence_1 += np.array(process_dic[i])
+        else:
+            sentence_1 += 0
+    for i in word_li2:
+        if i in process_dic:
+            sentence_2 += np.array(process_dic[i])
+        else:
+            sentence_2 += 0
+
+    sentence_1_vec = list(sentence_1/len(word_li1))
+    sentence_2_vec = list(sentence_2/len(word_li2))
+
+    A = 0
+    B = 0
+    AB = 0
+    for i in range(len(sentence_1_vec)):
+        A = A + sentence_1_vec[i] * sentence_2_vec[i]
+        B = B + sentence_1_vec[i] * sentence_2_vec[i]
+        AB = AB + sentence_1_vec[i] * sentence_2_vec[i]
+    distance = AB / (A ** 0.5 * B ** 0.5)
+
+    return distance
+
+
+def value_matrix_old(li):
+    '''
+    计算句子与句子之间的权值，返回一个权值矩阵
+    :param li: [['今天','下雨'],['明天','天气','怎样'],['这','真的','是,'太棒了,]]
+    :return:
+    '''
+    matrix = np.zeros([len(li), len(li)])
+    for i in range(len(li)):
+        for k in range(len(li)):
+            if k > i:
+                matrix[i][k] = similary_compute_old(li[i], li[k])
+                matrix[k][i] = matrix[i][k]
+    # m_r = FZ(matrix)
+    # m_last = m_r + matrix
+    return matrix
+
+
+def value_matrix_vec(li):
+    '''
+    计算句子与句子之间的权值，返回一个权值矩阵
+    :param li: [['今天','下雨'],['明天','天气','怎样'],['这','真的','是,'太棒了,]]
+    :return:
+    '''
+    with open(r'E:\nlp\语料\文本摘要提取\词向量字典.txt', 'rb') as f:
+        dic_word_vec = pickle.load(f)
+
+    matrix = np.zeros([len(li), len(li)])
+    for i in range(len(li)):
+        for k in range(len(li)):
+            if k > i:
+                matrix[i][k] = similary_compute_vec(li[i], li[k], dic_word_vec)
+                matrix[k][i] = matrix[i][k]
+    # m_r = FZ(matrix)
+    # m_last = m_r + matrix
+    print('权值矩阵加载完毕')
+    return matrix
+
+
+def textrank(matrix, n, para=0.8):  # 更改权重字典dic_2，lenth为li的长度，也为matrix的行（宽）长度
+    dic_linshi = {}
+    sum_li = list(matrix.sum(axis=1))  # 相似度按行相加的结果列表
+
+    for i in range(len(matrix)):
+        dic_linshi[i] = 1  # 初始化权重
+    count = 0
+    while count < n:
+        for i in range(len(matrix)):
+            s = 0
+            for k in range(len(matrix)):
+                if i != k:
+                    s += (matrix[k][i]/sum_li[k])*dic_linshi[k]
+            dic_2[i] = 1-para+para*s
+
+        dic_linshi = dic_2.copy()  # 将dic_2的值传给dic
+        count += 1
+        # print('\r现在的进度是：{:.2f}%'.format(100*count/n))
+
+
+def sigle_process(content_path, n):
+    '''
+    针对单个文档的摘要提取函数，目前功能为打印输出结果
+    :param content_path:
+    :param n:
+    :return:
+    '''
+    dic.clear()
+    dic_2.clear()
+    zhaiyao_path = content_path.replace('新闻分类', '新闻分类摘要')[:-4] + '的摘要_基于向量.txt'
+
+    try:
+        li = process_txt(content_path, dic)
+
+        matrix = value_matrix_vec(li)  # 修改此行更改textrank算法中相似度的计算方法 value_matrix_vec(li)/value_matrix_old(li)
+
+        textrank(matrix, 500)
+        sort_d = dict(sorted(dic_2.items(), key=lambda d: d[1], reverse=True))
+        ccc = 1
+        list_num = []
+        for i in sort_d:  # 序号+排序好的句子权重（从大到小）
+            if ccc > n:
+                break
+            list_num.append(i)
+            ccc += 1
+
+        list_num.sort()
+
+        for num in list_num:
+            print(dic[num])
+            with open(zhaiyao_path, 'a', encoding='utf-8') as f:
+                    f.write('\t' + dic[num] + '\n')  # 摘要写入文件
+
+    except:
+        print(content_path + '出错了！')
+
+
+def multi_process(filepath, n):
+    # 遍历filepath下所有文件，包括子目录
+    files = os.listdir(filepath)
+    for fi in files:
+        fi_d = os.path.join(filepath, fi)
+        if os.path.isdir(fi_d):
+            multi_process(fi_d, n)
+        else:
+            sigle_process(fi_d, n)
+
+
+if __name__ == '__main__':
+    # process_csv(r'C:\Users\Administrator.PC-201801041552\Desktop\financial_news.csv', r'F:\test\新闻分类')
+
+
+    start = time.time()
+# -----------------------
+# 初始化部分
+    jieba.load_userdict(r'E:\nlp\分词\自定义词典.txt')
+    ncount = 0
+    dic = {}  # 序号+句子
+    dic_2 = {}  # 序号+句子权重
+# -----------------------
+    multi_process(r'F:\test\新闻分类', 3)
+    # sigle_process(r'F:\test\新闻分类\AI\中国有意超越美国成为AI创新大国.txt', n=3)
+    end = time.time()
+    print('程序耗时：{:.2f}s'.format(end - start))
+
