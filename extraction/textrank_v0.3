@@ -142,10 +142,6 @@ def process_csv(csv_path, save_path):
     print('错误的文件个数为：{}'.format(error_count))
 
 
-def process_piliang():
-    pass
-
-
 def similary_compute_old(word_li1, word_li2):
     '''
     :param word_li1: ['今天','下雨']
@@ -185,16 +181,16 @@ def similary_compute_vec(word_li1, word_li2, process_dic):
         else:
             sentence_2 += 0
 
-    sentence_1_vec = list(sentence_1/len(word_li1))
-    sentence_2_vec = list(sentence_2/len(word_li2))
+    sentence_1_vec = sentence_1/len(word_li1)
+    sentence_2_vec = sentence_2/len(word_li2)
 
     A = 0
     B = 0
     AB = 0
     for i in range(len(sentence_1_vec)):
-        A = A + sentence_1_vec[i] * sentence_2_vec[i]
-        B = B + sentence_1_vec[i] * sentence_2_vec[i]
-        AB = AB + sentence_1_vec[i] * sentence_2_vec[i]
+        A = np.sum(sentence_1_vec*sentence_1_vec)
+        B = np.sum(sentence_2_vec*sentence_2_vec)
+        AB = np.sum(sentence_1_vec*sentence_2_vec)
     distance = AB / (A ** 0.5 * B ** 0.5)
 
     return distance
