@@ -13,3 +13,11 @@ based_on_wordvec: v0.1 ---> v0.2
 changes:
   程序重写
   部分基于textrank中的处理，例如词向量字典部分
+
+---------------------------------------
+2018.8.7
+
+textrank: v0.2 ---> v0.3
+changes:
+  增加了多文档处理方法（multi_process）
+  调整bug
